@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Campus Teams | Game Registration</title>
+<style>
+:root{--navy:#102747;--navy2:#1d3d66;--ink:#172437;--muted:#64748b;--line:#dbe3ed;--bg:#f5f7fb;--white:#fff;--danger:#b42318;--ok:#067647}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{background:var(--navy);color:white;padding:18px max(20px,calc((100% - 1100px)/2));display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}
+.brand{font-weight:800;letter-spacing:.2px;font-size:19px}.brand span{color:#b8d3f5}nav{display:flex;gap:8px}button,.btn{border:0;border-radius:9px;padding:10px 14px;font:inherit;font-weight:650;cursor:pointer;background:var(--navy);color:#fff}button.secondary{background:white;color:var(--navy);border:1px solid var(--line)}button:disabled{opacity:.45;cursor:not-allowed}
+main{max-width:1100px;margin:28px auto;padding:0 18px}.hero{background:white;border:1px solid var(--line);border-radius:18px;padding:28px;margin-bottom:20px}.eyebrow{text-transform:uppercase;font-size:11px;letter-spacing:1.5px;font-weight:800;color:var(--navy2)}h1{font-size:clamp(27px,4vw,38px);line-height:1.15;margin:8px 0 10px;color:var(--navy)}h2{font-size:20px;margin:0 0 14px;color:var(--navy)}p{margin:5px 0;color:var(--muted)}.layout{display:grid;grid-template-columns:1fr 1fr;gap:18px}.card{background:white;border:1px solid var(--line);border-radius:15px;padding:22px;min-width:0}.full{grid-column:1/-1}.field{display:flex;flex-direction:column;gap:6px;margin:13px 0}.field label{font-size:13px;font-weight:700;color:#344256}.field input,.field select{width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:9px;background:#fff;color:var(--ink);font:inherit}.hint{font-size:12px;color:var(--muted)}.notice{padding:12px 14px;border-radius:10px;background:#eef4fb;color:var(--navy);margin:12px 0}.error{color:var(--danger)}.success{color:var(--ok)}.hidden{display:none!important}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}.tabs button.active{background:var(--navy2)}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}.stat{padding:14px;background:#f4f7fb;border-radius:10px}.stat strong{display:block;font-size:24px;color:var(--navy)}.stat small{color:var(--muted)}.tablewrap{overflow:auto}table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:11px;border-bottom:1px solid var(--line);white-space:nowrap}th{color:#536278;font-size:12px;text-transform:uppercase;letter-spacing:.5px}td{color:#26364b}.pill{display:inline-block;border-radius:99px;padding:4px 9px;background:#e8f0fb;color:var(--navy);font-size:12px;font-weight:700}.pill.closed{background:#feeceb;color:var(--danger)}.pill.full{background:#fef3c7;color:#92400e}.gameitem{border:1px solid var(--line);padding:14px;border-radius:10px;margin:10px 0;display:flex;justify-content:space-between;gap:10px;align-items:center}.qr{width:190px;height:190px;object-fit:contain;border:1px solid var(--line);padding:8px;border-radius:10px}.foot{text-align:center;color:var(--muted);font-size:12px;padding:25px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.inline{display:flex;gap:10px;align-items:center;flex-wrap:wrap}@media(max-width:720px){.layout{grid-template-columns:1fr}.full{grid-column:auto}.hero{padding:22px}.stats{grid-template-columns:repeat(3,1fr)}header{padding:15px 18px}.card{padding:17px}}
+.activity-row{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:8px 0;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.activity-row .meta{flex:1;min-width:180px}
+.activity-row .meta input{width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:7px;font:inherit;margin:3px 0}
+.activity-row strong{color:var(--navy)}
+.bar{height:6px;border-radius:99px;background:#e2e8f0;margin-top:6px;overflow:hidden}
+.bar>span{display:block;height:100%;background:var(--navy2)}
+.bar.full>span{background:var(--danger)}
+</style>
+</head>
+<body>
+<header><div class="brand">Campus <span>Teams</span></div><nav><button class="secondary" id="studentNav">Student registration</button><button class="secondary" id="ownerNav">Organizer</button></nav></header>
+<main>
+<section class="hero"><div class="eyebrow">Campus game registration</div><h1>Get registered. Get on the team.</h1><p>Pick your activity, sign up, and get split into balanced teams. Each activity has its own slot limit.</p></section>
+<div id="setupWarning" class="notice hidden">Setup required: add your Supabase project URL and public anon key in the <code>CONFIG</code> section of <code>index.html</code>, then run <code>schema.sql</code> in Supabase SQL Editor. See README.md.</div>
+
+<section id="studentView" class="layout">
+  <div class="card">
+    <h2>Open registrations</h2>
+    <div id="openGames"><p>Loading registrations…</p></div>
+  </div>
+  <div class="card">
+    <h2>Register for a game</h2>
+    <div id="studentStatus" class="hint">Choose an open game to begin.</div>
+    <form id="registerForm">
+      <input type="hidden" id="gameId">
+      <div class="field">
+        <label for="activitySelect">Activity</label>
+        <select id="activitySelect" required disabled>
+          <option value="">Select an activity…</option>
+        </select>
+        <span class="hint" id="activityHint">Pick a game first to see available activities.</span>
+      </div>
+      <div class="field"><label for="studentName">Full name</label><input id="studentName" maxlength="100" required placeholder="Enter your name"></div>
+      <div class="field"><label for="major">Major</label><input id="major" maxlength="100" required placeholder="e.g. Cybersecurity"></div>
+      <div class="field"><label for="studentEmail">Student email (optional)</label><input id="studentEmail" type="email" maxlength="200" placeholder="name@school.edu"></div>
+      <button id="registerButton" type="submit">Register me</button>
+      <p class="hint">Registration closes automatically when an activity reaches its limit. Duplicate sign-ups for the same activity are blocked by email where provided.</p>
+    </form>
+  </div>
+  <div class="card full">
+    <h2>Registration lists</h2>
+    <p>Activity slot counts appear here for games that are open to view. Organizers can manage private lists after signing in.</p>
+    <div id="publicLists"><p class="hint">Select a game above to see its registration counts.</p></div>
+  </div>
+</section>
+
+<section id="ownerView" class="hidden">
+  <div id="loginCard" class="card" style="max-width:480px;margin:auto">
+    <h2>Organizer sign in</h2>
+    <p>Use the organizer email and password created in Supabase Authentication.</p>
+    <form id="loginForm">
+      <div class="field"><label>Email</label><input id="ownerEmail" type="email" required autocomplete="username"></div>
+      <div class="field"><label>Password</label><input id="ownerPassword" type="password" required autocomplete="current-password"></div>
+      <button type="submit">Sign in</button>
+    </form>
+    <p id="loginStatus" class="hint"></p>
+  </div>
+  <div id="dashboard" class="hidden">
+    <div class="tabs">
+      <button class="active" data-tab="manageTab">Registrations</button>
+      <button class="secondary" data-tab="createTab">Create registration</button>
+    </div>
+    <section id="manageTab" class="card">
+      <h2>Manage registrations</h2>
+      <p>Create registration rounds, close them manually, view sign-ups per activity, and generate teams.</p>
+      <div id="ownerGames"></div>
+      <div id="ownerDetails" class="hidden"></div>
+      <div class="actions"><button class="secondary" id="logoutButton">Sign out</button></div>
+    </section>
+    <section id="createTab" class="card hidden">
+      <h2>Create a registration round</h2>
+      <form id="createForm">
+        <div class="field"><label>Game / event name</label><input id="gameTitle" required maxlength="120" placeholder="e.g. Sports Day 2026"></div>
+        <div class="field"><label>Description (optional)</label><input id="gameDescription" maxlength="300" placeholder="Location, time, or notes"></div>
+        <div class="field"><label>Team split</label><select id="teamCount"><option value="2">2 teams</option><option value="3">3 teams</option><option value="4">4 teams</option></select></div>
+        <div class="field">
+          <label>Activities and their slot limits</label>
+          <div id="activityRows"></div>
+          <button type="button" class="secondary" id="addActivityRow">+ Add activity</button>
+          <span class="hint">Each activity is registered separately and closes when its own limit is reached. Defaults are pre-filled.</span>
+        </div>
+        <button type="submit">Create registration</button>
+      </form>
+      <p id="createStatus" class="hint"></p>
+    </section>
+  </div>
+</section>
+</main>
+<div class="foot">Campus Teams · Minimal, mobile-friendly registration</div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script>
+/* SETUP: replace these two values with your Supabase project credentials. Never put a service_role key here. */
+const CONFIG={SUPABASE_URL:"YOUR_SUPABASE_PROJECT_URL",SUPABASE_ANON_KEY:"YOUR_SUPABASE_ANON_KEY"};
+const configured=CONFIG.SUPABASE_URL.startsWith("https://")&&CONFIG.SUPABASE_ANON_KEY!=="YOUR_SUPABASE_ANON_KEY";
+const db=configured?supabase.createClient(CONFIG.SUPABASE_URL,CONFIG.SUPABASE_ANON_KEY):null;
+let currentUser=null, selectedGame=null, gamesCache=[], activitiesCache=[];
+const DEFAULT_ACTIVITIES=[
+  {name:"Volleyball",capacity:32},
+  {name:"Basketball",capacity:12},
+  {name:"Egg game",capacity:30},
+  {name:"Save the water",capacity:30},
+  {name:"3-1 game",capacity:32}
+];
+const $=id=>document.getElementById(id);
+function status(el,msg,cls="hint"){el.className=cls;el.textContent=msg}
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function showView(which){$("studentView").classList.toggle("hidden",which!=="student");$("ownerView").classList.toggle("hidden",which!=="owner")}
+$("studentNav").onclick=()=>{showView("student");loadGames()};
+$("ownerNav").onclick=()=>{showView("owner")};
+document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll("[data-tab]").forEach(x=>{x.classList.toggle("active",x===b);x.classList.toggle("secondary",x!==b)});
+  $("manageTab").classList.toggle("hidden",b.dataset.tab!=="manageTab");
+  $("createTab").classList.toggle("hidden",b.dataset.tab!=="createTab");
+});
+if(!configured){
+  $("setupWarning").classList.remove("hidden");
+  $("openGames").innerHTML="<p>Connect Supabase to activate registration.</p>";
+  $("registerForm").querySelector("button").disabled=true;
+}
+
+/* ---------- Activity row editor for the create form ---------- */
+function addActivityRow(name="",capacity=""){
+  const row=document.createElement("div");
+  row.className="activity-row";
+  row.innerHTML=`
+    <div class="meta">
+      <input class="act-name" placeholder="Activity name" maxlength="100" value="${esc(name)}">
+      <input class="act-cap" type="number" min="1" max="10000" placeholder="Slots" value="${esc(capacity)}">
+    </div>
+    <button type="button" class="secondary remove">Remove</button>`;
+  row.querySelector(".remove").onclick=()=>row.remove();
+  $("activityRows").appendChild(row);
+}
+$("addActivityRow").onclick=()=>addActivityRow();
+DEFAULT_ACTIVITIES.forEach(a=>addActivityRow(a.name,a.capacity));
+
+/* ---------- Public: load games + activity slot counts ---------- */
+async function loadGames(){
+  if(!db)return;
+  const {data,error}=await db.from("games")
+    .select("id,title,description,team_count,is_open,created_at")
+    .order("created_at",{ascending:false});
+  if(error){
+    $("openGames").innerHTML='<p class="error">Could not load games. Check Supabase setup and policies.</p>';
+    return;
+  }
+  gamesCache=data||[];
+  const open=gamesCache.filter(g=>g.is_open);
+  $("openGames").innerHTML=open.length
+    ? open.map(g=>`<div class="gameitem"><div><strong>${esc(g.title)}</strong><p>${esc(g.description||"")}</p></div><button onclick="chooseGame('${g.id}')">Select</button></div>`).join("")
+    : "<p>No registrations are open right now.</p>";
+
+  const ids=open.map(g=>g.id);
+  let acts=[];
+  if(ids.length){
+    const r=await db.from("activities")
+      .select("id,game_id,name,capacity,is_open")
+      .in("game_id",ids)
+      .order("created_at",{ascending:true});
+    acts=r.data||[];
+  }
+  activitiesCache=acts;
+  const counts={};
+  if(acts.length){
+    const r2=await db.from("registrations").select("activity_id").in("activity_id",acts.map(a=>a.id));
+    (r2.data||[]).forEach(r=>counts[r.activity_id]=(counts[r.activity_id]||0)+1);
+  }
+  $("publicLists").innerHTML=open.map(g=>{
+    const list=acts.filter(a=>a.game_id===g.id);
+    const rows=list.map(a=>{
+      const used=counts[a.id]||0;
+      const pct=Math.min(100,Math.round((used/a.capacity)*100));
+      return `<div class="activity-row">
+        <div class="meta">
+          <strong>${esc(a.name)}</strong>
+          <span class="hint">· ${used}/${a.capacity} slots${a.is_open?"":" · closed"}</span>
+          <div class="bar ${used>=a.capacity?"full":""}"><span style="width:${pct}%"></span></div>
+        </div>
+        <span class="pill ${a.is_open?"":"closed"}">${a.is_open?"Open":"Closed"}</span>
+      </div>`;
+    }).join("");
+    return `<div class="gameitem" style="display:block">
+      <div><strong>${esc(g.title)}</strong> <span class="pill ${g.is_open?"":"closed"}">${g.is_open?"Open":"Closed"}</span></div>
+      ${rows||'<p class="hint">No activities yet.</p>'}
+    </div>`;
+  }).join("")||"<p>No events created yet.</p>";
+}
+
+/* ---------- Student: choose a game, then choose an activity ---------- */
+window.chooseGame=async id=>{
+  selectedGame=gamesCache.find(g=>g.id===id);
+  $("gameId").value=id;
+  const sel=$("activitySelect");
+  sel.innerHTML='<option value="">Select an activity…</option>';
+  sel.disabled=true;
+  status($("studentStatus"),`Registering for: ${selectedGame.title}`);
+  if(!db)return;
+  const {data,error}=await db.from("activities")
+    .select("id,name,capacity,is_open")
+    .eq("game_id",id)
+    .order("created_at",{ascending:true});
+  if(error){status($("studentStatus"),error.message,"error");return}
+  const acts=data||[];
+  activitiesCache=acts;
+  const counts={};
+  if(acts.length){
+    const r2=await db.from("registrations").select("activity_id").in("activity_id",acts.map(a=>a.id));
+    (r2.data||[]).forEach(r=>counts[r.activity_id]=(counts[r.activity_id]||0)+1);
+  }
+  sel.innerHTML=acts.length
+    ? acts.map(a=>{
+        const used=counts[a.id]||0;
+        const full=used>=a.capacity||!a.is_open;
+        return `<option value="${a.id}" ${full?"disabled":""}>${esc(a.name)} — ${used}/${a.capacity}${full?" (full)":""}</option>`;
+      }).join("")
+    : '<option value="">No activities for this game</option>';
+  sel.disabled=!acts.length;
+  $("activityHint").textContent=acts.length
+    ? "Each activity has its own slot limit."
+    : "This game has no activities.";
+};
+
+$("registerForm").onsubmit=async e=>{
+  e.preventDefault();
+  if(!db||!selectedGame)return status($("studentStatus"),"Choose an open registration first.","error");
+  const activityId=$("activitySelect").value;
+  if(!activityId)return status($("studentStatus"),"Choose an activity.","error");
+  const btn=$("registerButton");btn.disabled=true;
+  status($("studentStatus"),"Submitting…");
+  const payload={
+    game_id:$("gameId").value,
+    activity_id:activityId,
+    student_name:$("studentName").value.trim(),
+    major:$("major").value.trim(),
+    student_email:$("studentEmail").value.trim()||null
+  };
+  const {error}=await db.rpc("register_student",payload);
+  if(error){
+    const msg=error.message;
+    status($("studentStatus"),
+      msg.includes("ACTIVITY_FULL")?"Sorry, this activity has reached its limit.":
+      msg.includes("ACTIVITY_CLOSED")?"This activity is closed.":
+      msg.includes("REGISTRATION_CLOSED")?"This registration round is closed.":
+      msg.includes("DUPLICATE_EMAIL")?"You already registered for this activity with that email.":
+      msg,"error");
+  }else{
+    status($("studentStatus"),"Registration successful! You are on the activity list.","success");
+    $("registerForm").reset();
+    selectedGame=null;$("gameId").value="";
+    $("activitySelect").innerHTML='<option value="">Select an activity…</option>';
+    $("activitySelect").disabled=true;
+    await loadGames();
+  }
+  btn.disabled=false;
+};
+
+/* ---------- Organizer ---------- */
+$("loginForm").onsubmit=async e=>{
+  e.preventDefault();
+  if(!db)return status($("loginStatus"),"Finish Supabase setup first.","error");
+  const {data,error}=await db.auth.signInWithPassword({
+    email:$("ownerEmail").value,
+    password:$("ownerPassword").value
+  });
+  if(error)return status($("loginStatus"),error.message,"error");
+  currentUser=data.user;
+  await checkOwner();
+};
+
+async function checkOwner(){
+  const {data,error}=await db.from("organizers").select("user_id").eq("user_id",currentUser.id).maybeSingle();
+  if(error||!data){
+    await db.auth.signOut();
+    currentUser=null;
+    return status($("loginStatus"),"This account is not authorized as an organizer.","error");
+  }
+  $("loginCard").classList.add("hidden");
+  $("dashboard").classList.remove("hidden");
+  await loadOwnerGames();
+}
+
+async function loadOwnerGames(){
+  const {data,error}=await db.from("games").select("*").order("created_at",{ascending:false});
+  if(error)return $("ownerGames").innerHTML='<p class="error">Could not load registrations.</p>';
+  gamesCache=data||[];
+  $("ownerGames").innerHTML=gamesCache.map(g=>`
+    <div class="gameitem">
+      <div><strong>${esc(g.title)}</strong><p>${g.is_open?"Open":"Closed"} · ${esc(g.description||"")}</p></div>
+      <div class="actions">
+        <button onclick="openDetails('${g.id}')">View list</button>
+        <button class="secondary" onclick="toggleGame('${g.id}',${!g.is_open})">${g.is_open?"Close":"Reopen"}</button>
+      </div>
+    </div>`).join("")||"<p>No registrations yet. Create one in the next tab.</p>";
+}
+
+window.toggleGame=async(id,is_open)=>{
+  const {error}=await db.from("games").update({is_open}).eq("id",id);
+  if(error)alert(error.message);
+  await loadOwnerGames();
+  await loadGames();
+};
+
+window.openDetails=async id=>{
+  const g=gamesCache.find(x=>x.id===id);
+  const {data:acts,error:ae}=await db.from("activities")
+    .select("id,name,capacity,is_open")
+    .eq("game_id",id)
+    .order("created_at",{ascending:true});
+  if(ae)return alert(ae.message);
+  const activityList=acts||[];
+
+  const {data,error}=await db.from("registrations")
+    .select("id,activity_id,student_name,major,student_email,created_at")
+    .eq("game_id",id)
+    .order("created_at",{ascending:true});
+  if(error)return alert(error.message);
+  const list=data||[];
+  const counts={};
+  list.forEach(s=>counts[s.activity_id]=(counts[s.activity_id]||0)+1);
+
+  const activityStats=activityList.map(a=>{
+    const used=counts[a.id]||0;
+    const pct=Math.min(100,Math.round((used/a.capacity)*100));
+    return `<div class="activity-row">
+      <div class="meta">
+        <strong>${esc(a.name)}</strong>
+        <span class="hint">· ${used}/${a.capacity} slots · ${Math.max(0,a.capacity-used)} left${a.is_open?"":" · closed"}</span>
+        <div class="bar ${used>=a.capacity?"full":""}"><span style="width:${pct}%"></span></div>
+      </div>
+      <div class="actions">
+        <span class="pill ${a.is_open?"":"closed"}">${a.is_open?"Open":"Closed"}</span>
+        <button class="secondary" onclick="toggleActivity('${a.id}',${!a.is_open},'${id}')">${a.is_open?"Close":"Reopen"}</button>
+        <button class="secondary" onclick="splitTeams('${a.id}',${g.team_count})">Split ${g.team_count} teams</button>
+      </div>
+    </div>`;
+  }).join("");
+
+  const box=$("ownerDetails");
+  box.classList.remove("hidden");
+  box.innerHTML=`<hr>
+    <h2>${esc(g.title)}</h2>
+    <div class="stats">
+      <div class="stat"><strong>${list.length}</strong><small>Total registered</small></div>
+      <div class="stat"><strong>${activityList.length}</strong><small>Activities</small></div>
+      <div class="stat"><strong>${activityList.reduce((s,a)=>s+a.capacity,0)}</strong><small>Total slots</small></div>
+    </div>
+    <h2>Activities & slot limits</h2>
+    ${activityStats||'<p class="hint">No activities on this game.</p>'}
+    <div class="inline">
+      <span class="pill ${g.is_open?"":"closed"}">${g.is_open?"Open":"Closed"}</span>
+      <button onclick="makeQR('${g.id}')">Generate QR code</button>
+      <button class="secondary" onclick="downloadCSV('${g.id}')">Export CSV</button>
+    </div>
+    <div id="qrArea"></div>
+    <div id="teamsArea"></div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>#</th><th>Name</th><th>Major</th><th>Activity</th><th>Email</th><th>Registered at</th></tr></thead>
+        <tbody>${list.map((s,i)=>{
+          const a=activityList.find(x=>x.id===s.activity_id);
+          return `<tr>
+            <td>${i+1}</td>
+            <td>${esc(s.student_name)}</td>
+            <td>${esc(s.major)}</td>
+            <td>${esc(a?a.name:"—")}</td>
+            <td>${esc(s.student_email||"—")}</td>
+            <td>${new Date(s.created_at).toLocaleString()}</td>
+          </tr>`;
+        }).join("")}</tbody>
+      </table>
+    </div>`;
+  box.dataset.gameId=id;
+  box.dataset.rows=JSON.stringify(list.map(s=>{
+    const a=activityList.find(x=>x.id===s.activity_id);
+    return {...s,activity_name:a?a.name:""};
+  }));
+  box.scrollIntoView({behavior:"smooth",block:"start"});
+};
+
+window.toggleActivity=async(aid,is_open,gid)=>{
+  const {error}=await db.from("activities").update({is_open}).eq("id",aid);
+  if(error)alert(error.message);
+  await openDetails(gid);
+};
+
+window.makeQR=async id=>{
+  const url=new URL(location.href);
+  url.searchParams.set("game",id);
+  const area=$("qrArea");
+  area.innerHTML='<p>QR code links directly to this website registration page.</p><p><a id="directLink"></a></p><canvas id="qrCanvas"></canvas><br><button class="secondary" id="downloadQR">Download QR PNG</button>';
+  const link=$("directLink");
+  link.href=url.toString();
+  link.textContent=url.toString();
+  await QRCode.toCanvas($("qrCanvas"),url.toString(),{width:220,margin:2});
+  $("downloadQR").onclick=()=>{
+    const a=document.createElement("a");
+    a.download="registration-qr.png";
+    a.href=$("qrCanvas").toDataURL("image/png");
+    a.click();
+  };
+};
+
+window.splitTeams=async(activity_id,count)=>{
+  const {data,error}=await db.from("registrations")
+    .select("student_name,major")
+    .eq("activity_id",activity_id)
+    .order("created_at",{ascending:true});
+  if(error)return alert(error.message);
+  const shuffled=[...(data||[])];
+  for(let i=shuffled.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]];
+  }
+  const teams=Array.from({length:count},()=>[]);
+  shuffled.forEach((s,i)=>teams[i%count].push(s));
+  $("teamsArea").innerHTML=`<h2>Random team split</h2>
+    <div class='layout'>${teams.map((t,i)=>`
+      <div class="card">
+        <strong>Team ${i+1} (${t.length})</strong>
+        <ol>${t.map(s=>`<li>${esc(s.student_name)} <span class="hint">· ${esc(s.major)}</span></li>`).join("")}</ol>
+      </div>`).join("")}</div>
+    <p class='hint'>Teams are randomized in this view and are not saved. Re-splitting generates a new arrangement.</p>`;
+};
+
+window.downloadCSV=id=>{
+  const rows=JSON.parse($("ownerDetails").dataset.rows||"[]");
+  const csv=[["Name","Major","Activity","Email","Registered at"],
+    ...rows.map(s=>[s.student_name,s.major,s.activity_name||"",s.student_email||"",s.created_at])
+  ].map(r=>r.map(v=>'"'+String(v??"").replace(/"/g,'""')+'"').join(",")).join("\r\n");
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8;"}));
+  a.download="registrations.csv";
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
+
+$("createForm").onsubmit=async e=>{
+  e.preventDefault();
+  const rows=[...document.querySelectorAll("#activityRows .activity-row")].map(r=>({
+    name:r.querySelector(".act-name").value.trim(),
+    capacity:Number(r.querySelector(".act-cap").value)
+  })).filter(a=>a.name&&a.capacity>0);
+
+  if(!rows.length)return status($("createStatus"),"Add at least one activity with a slot limit.","error");
+
+  // 1) create the game round
+  const {data:game,error:gerr}=await db.from("games").insert({
+    title:$("gameTitle").value.trim(),
+    description:$("gameDescription").value.trim(),
+    team_count:Number($("teamCount").value),
+    is_open:true,
+    created_by:currentUser.id
+  }).select().single();
+  if(gerr)return status($("createStatus"),gerr.message,"error");
+
+  // 2) create activities for that game
+  const payload=rows.map(a=>({game_id:game.id,name:a.name,capacity:a.capacity,is_open:true}));
+  const {error:aerr}=await db.from("activities").insert(payload);
+  if(aerr){
+    status($("createStatus"),"Game created but activities failed: "+aerr.message,"error");
+  }else{
+    status($("createStatus"),"Registration created with activities. Open the Registrations tab to view its QR code.","success");
+    $("createForm").reset();
+    $("activityRows").innerHTML="";
+    DEFAULT_ACTIVITIES.forEach(a=>addActivityRow(a.name,a.capacity));
+  }
+  await loadOwnerGames();
+  await loadGames();
+};
+
+$("logoutButton").onclick=async()=>{
+  await db.auth.signOut();
+  currentUser=null;
+  $("dashboard").classList.add("hidden");
+  $("loginCard").classList.remove("hidden");
+};
+
+(async()=>{
+  if(!db)return;
+  const {data}=await db.auth.getSession();
+  if(data.session){currentUser=data.session.user;await checkOwner()}
+  await loadGames();
+  const id=new URLSearchParams(location.search).get("game");
+  if(id){
+    await loadGames();
+    if(gamesCache.some(g=>g.id===id&&g.is_open))chooseGame(id);
+    else status($("studentStatus"),"This registration link is closed or unavailable.","error");
+  }
+})();
+</script>
+</body>
+</html>
