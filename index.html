@@ -102,7 +102,7 @@ main{max-width:1100px;margin:28px auto;padding:0 18px}.hero{background:white;bor
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <script>
 /* SETUP: replace these two values with your Supabase project credentials. Never put a service_role key here. */
-const CONFIG={SUPABASE_URL:"https://jdnlfzmxjpaghtadeooj.supabase.co",SUPABASE_ANON_KEY:"sb_publishable_Nd_LQ-Atko3lSHLDkxERjw_z0k0QIIP"};
+const CONFIG={SUPABASE_URL:"https://jdnlfzmxjoaghtadeooj.supabase.co",SUPABASE_ANON_KEY:"sb_publishable_Nd_LQ-Atko3lSHLDkxERjw_z0k0QIIP"};
 const configured=CONFIG.SUPABASE_URL.startsWith("https://")&&CONFIG.SUPABASE_ANON_KEY!=="YOUR_SUPABASE_ANON_KEY";
 const db=configured?supabase.createClient(CONFIG.SUPABASE_URL,CONFIG.SUPABASE_ANON_KEY):null;
 let currentUser=null, selectedGame=null, gamesCache=[], activitiesCache=[];
