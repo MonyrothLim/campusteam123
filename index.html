@@ -22,7 +22,6 @@ main{max-width:1100px;margin:28px auto;padding:0 18px}.hero{background:white;bor
 <header><div class="brand">Campus <span>Teams</span></div><nav><button class="secondary" id="studentNav">Student registration</button><button class="secondary" id="ownerNav">Organizer</button></nav></header>
 <main>
 <section class="hero"><div class="eyebrow">Campus game registration</div><h1>Get registered. Get on the team.</h1><p>Pick your activity, sign up, and get split into balanced teams. Each activity has its own slot limit.</p></section>
-<div id="setupWarning" class="notice hidden">Setup required: add your Supabase project URL and public anon key in the <code>CONFIG</code> section of <code>index.html</code>, then run <code>schema.sql</code> in Supabase SQL Editor. See README.md.</div>
 
 <section id="studentView" class="layout">
   <div class="card">
@@ -98,14 +97,19 @@ main{max-width:1100px;margin:28px auto;padding:0 18px}.hero{background:white;bor
 </section>
 </main>
 <div class="foot">Campus Teams · Minimal, mobile-friendly registration</div>
-<!-- Updated script CDN for better reliability -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.5.3/qrcode.min.js"></script>
+
+<!-- Reliable QR Code Library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const CONFIG={SUPABASE_URL:"https://jdnlfzmxjoaghtadeooj.supabase.co",SUPABASE_ANON_KEY:"sb_publishable_Nd_LQ-Atko3lSHLDkxERjw_z0k0QIIP"};
+const CONFIG={
+  SUPABASE_URL:"https://jdnlfzmxjoaghtadeooj.supabase.co",
+  SUPABASE_ANON_KEY:"sb_publishable_Nd_LQ-Atko3lSHLDkxERjw_z0k0QIIP"
+};
 const configured=CONFIG.SUPABASE_URL.startsWith("https://")&&CONFIG.SUPABASE_ANON_KEY!=="YOUR_SUPABASE_ANON_KEY";
 const db=configured?supabase.createClient(CONFIG.SUPABASE_URL,CONFIG.SUPABASE_ANON_KEY):null;
 let currentUser=null, selectedGame=null, gamesCache=[], activitiesCache=[];
+
 const DEFAULT_ACTIVITIES=[
   {name:"Volleyball",capacity:32},
   {name:"Basketball",capacity:12},
@@ -113,22 +117,20 @@ const DEFAULT_ACTIVITIES=[
   {name:"Save the water",capacity:30},
   {name:"3-1 game",capacity:32}
 ];
+
 const $=id=>document.getElementById(id);
 function status(el,msg,cls="hint"){el.className=cls;el.textContent=msg}
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function showView(which){$("studentView").classList.toggle("hidden",which!=="student");$("ownerView").classList.toggle("hidden",which!=="owner")}
+
 $("studentNav").onclick=()=>{showView("student");loadGames()};
 $("ownerNav").onclick=()=>{showView("owner")};
+
 document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{
   document.querySelectorAll("[data-tab]").forEach(x=>{x.classList.toggle("active",x===b);x.classList.toggle("secondary",x!==b)});
   $("manageTab").classList.toggle("hidden",b.dataset.tab!=="manageTab");
   $("createTab").classList.toggle("hidden",b.dataset.tab!=="createTab");
 });
-if(!configured){
-  $("setupWarning").classList.remove("hidden");
-  $("openGames").innerHTML="<p>Connect Supabase to activate registration.</p>";
-  $("registerForm").querySelector("button").disabled=true;
-}
 
 /* ---------- Activity row editor for the create form ---------- */
 function addActivityRow(name="",capacity=""){
@@ -165,10 +167,7 @@ async function loadGames(){
   const ids=open.map(g=>g.id);
   let acts=[];
   if(ids.length){
-    const r=await db.from("activities")
-      .select("id,game_id,name,capacity,is_open")
-      .in("game_id",ids)
-      .order("created_at",{ascending:true});
+    const r=await db.from("activities").select("id,game_id,name,capacity,is_open").in("game_id",ids).order("created_at",{ascending:true});
     acts=r.data||[];
   }
   activitiesCache=acts;
@@ -207,10 +206,7 @@ window.chooseGame=async id=>{
   sel.disabled=true;
   status($("studentStatus"),`Registering for: ${selectedGame.title}`);
   if(!db)return;
-  const {data,error}=await db.from("activities")
-    .select("id,name,capacity,is_open")
-    .eq("game_id",id)
-    .order("created_at",{ascending:true});
+  const {data,error}=await db.from("activities").select("id,name,capacity,is_open").eq("game_id",id).order("created_at",{ascending:true});
   if(error){status($("studentStatus"),error.message,"error");return}
   const acts=data||[];
   activitiesCache=acts;
@@ -227,9 +223,7 @@ window.chooseGame=async id=>{
       }).join("")
     : '<option value="">No activities for this game</option>';
   sel.disabled=!acts.length;
-  $("activityHint").textContent=acts.length
-    ? "Each activity has its own slot limit."
-    : "This game has no activities.";
+  $("activityHint").textContent=acts.length ? "Each activity has its own slot limit." : "This game has no activities.";
 };
 
 $("registerForm").onsubmit=async e=>{
@@ -239,6 +233,7 @@ $("registerForm").onsubmit=async e=>{
   if(!activityId)return status($("studentStatus"),"Choose an activity.","error");
   const btn=$("registerButton");btn.disabled=true;
   status($("studentStatus"),"Submitting…");
+  
   const payload={
     game_id:$("gameId").value,
     activity_id:activityId,
@@ -246,13 +241,11 @@ $("registerForm").onsubmit=async e=>{
     major:$("major").value.trim(),
     student_email:$("studentEmail").value.trim()||null
   };
+  
   const {error}=await db.rpc("register_student",payload);
   if(error){
-    const msg=error.message;
-    status($("studentStatus"),
-      msg.includes("ACTIVITY_FULL")?"Sorry, this activity has reached its limit.":
-      msg.includes("ACTIVITY_CLOSED")?"This activity is closed.":
-      msg.includes("ACTIVITY_NOT_FOUND")?"Database could not find this activity. Please refresh and try again.":
+    // This shows the EXACT database error message so we know what is wrong
+    status($("studentStatus"), "Database Error: " + error.message, "error");
   }else{
     status($("studentStatus"),"Registration successful! You are on the activity list.","success");
     $("registerForm").reset();
@@ -268,10 +261,7 @@ $("registerForm").onsubmit=async e=>{
 $("loginForm").onsubmit=async e=>{
   e.preventDefault();
   if(!db)return status($("loginStatus"),"Finish Supabase setup first.","error");
-  const {data,error}=await db.auth.signInWithPassword({
-    email:$("ownerEmail").value,
-    password:$("ownerPassword").value
-  });
+  const {data,error}=await db.auth.signInWithPassword({email:$("ownerEmail").value,password:$("ownerPassword").value});
   if(error)return status($("loginStatus"),error.message,"error");
   currentUser=data.user;
   await checkOwner();
@@ -312,17 +302,11 @@ window.toggleGame=async(id,is_open)=>{
 
 window.openDetails=async id=>{
   const g=gamesCache.find(x=>x.id===id);
-  const {data:acts,error:ae}=await db.from("activities")
-    .select("id,name,capacity,is_open")
-    .eq("game_id",id)
-    .order("created_at",{ascending:true});
+  const {data:acts,error:ae}=await db.from("activities").select("id,name,capacity,is_open").eq("game_id",id).order("created_at",{ascending:true});
   if(ae)return alert(ae.message);
   const activityList=acts||[];
 
-  const {data,error}=await db.from("registrations")
-    .select("id,activity_id,student_name,major,student_email,created_at")
-    .eq("game_id",id)
-    .order("created_at",{ascending:true});
+  const {data,error}=await db.from("registrations").select("id,activity_id,student_name,major,student_email,created_at").eq("game_id",id).order("created_at",{ascending:true});
   if(error)return alert(error.message);
   const list=data||[];
   const counts={};
@@ -402,7 +386,7 @@ window.makeQR=async id=>{
   link.href=url.toString();
   link.textContent=url.toString();
   
-  // Use the updated QR library
+  // Using qrcodejs library to generate the QR Code
   new QRCode($("qrCanvas"), {
     text: url.toString(),
     width: 220,
@@ -417,21 +401,14 @@ window.makeQR=async id=>{
     const canvas = $("qrCanvas").querySelector("canvas");
     const a = document.createElement("a");
     a.download = "registration-qr.png";
-    // Handle both canvas rendering and img rendering
-    if (canvas) {
-      a.href = canvas.toDataURL("image/png");
-    } else if (img) {
-      a.href = img.src;
-    }
+    if (canvas) { a.href = canvas.toDataURL("image/png"); } 
+    else if (img) { a.href = img.src; }
     a.click();
   };
 };
 
 window.splitTeams=async(activity_id,count)=>{
-  const {data,error}=await db.from("registrations")
-    .select("student_name,major")
-    .eq("activity_id",activity_id)
-    .order("created_at",{ascending:true});
+  const {data,error}=await db.from("registrations").select("student_name,major").eq("activity_id",activity_id).order("created_at",{ascending:true});
   if(error)return alert(error.message);
   const shuffled=[...(data||[])];
   for(let i=shuffled.length-1;i>0;i--){
