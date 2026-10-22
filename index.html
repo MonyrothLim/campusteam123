@@ -252,9 +252,7 @@ $("registerForm").onsubmit=async e=>{
     status($("studentStatus"),
       msg.includes("ACTIVITY_FULL")?"Sorry, this activity has reached its limit.":
       msg.includes("ACTIVITY_CLOSED")?"This activity is closed.":
-      msg.includes("REGISTRATION_CLOSED")?"This registration round is closed.":
-      msg.includes("DUPLICATE_EMAIL")?"You already registered for this activity with that email.":
-      msg,"error");
+      msg.includes("ACTIVITY_NOT_FOUND")?"Database could not find this activity. Please refresh and try again.":
   }else{
     status($("studentStatus"),"Registration successful! You are on the activity list.","success");
     $("registerForm").reset();
