@@ -98,10 +98,10 @@ main{max-width:1100px;margin:28px auto;padding:0 18px}.hero{background:white;bor
 </section>
 </main>
 <div class="foot">Campus Teams · Minimal, mobile-friendly registration</div>
+<!-- Updated script CDN for better reliability -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.5.3/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <script>
-/* SETUP: replace these two values with your Supabase project credentials. Never put a service_role key here. */
 const CONFIG={SUPABASE_URL:"https://jdnlfzmxjoaghtadeooj.supabase.co",SUPABASE_ANON_KEY:"sb_publishable_Nd_LQ-Atko3lSHLDkxERjw_z0k0QIIP"};
 const configured=CONFIG.SUPABASE_URL.startsWith("https://")&&CONFIG.SUPABASE_ANON_KEY!=="YOUR_SUPABASE_ANON_KEY";
 const db=configured?supabase.createClient(CONFIG.SUPABASE_URL,CONFIG.SUPABASE_ANON_KEY):null;
@@ -399,15 +399,32 @@ window.makeQR=async id=>{
   const url=new URL(location.href);
   url.searchParams.set("game",id);
   const area=$("qrArea");
-  area.innerHTML='<p>QR code links directly to this website registration page.</p><p><a id="directLink"></a></p><canvas id="qrCanvas"></canvas><br><button class="secondary" id="downloadQR">Download QR PNG</button>';
+  area.innerHTML='<p>QR code links directly to this website registration page.</p><p><a id="directLink"></a></p><div id="qrCanvas"></div><br><button class="secondary" id="downloadQR">Download QR PNG</button>';
   const link=$("directLink");
   link.href=url.toString();
   link.textContent=url.toString();
-  await QRCode.toCanvas($("qrCanvas"),url.toString(),{width:220,margin:2});
+  
+  // Use the updated QR library
+  new QRCode($("qrCanvas"), {
+    text: url.toString(),
+    width: 220,
+    height: 220,
+    colorDark : "#102747",
+    colorLight : "#ffffff",
+    correctLevel : QRCode.CorrectLevel.H
+  });
+
   $("downloadQR").onclick=()=>{
-    const a=document.createElement("a");
-    a.download="registration-qr.png";
-    a.href=$("qrCanvas").toDataURL("image/png");
+    const img = $("qrCanvas").querySelector("img");
+    const canvas = $("qrCanvas").querySelector("canvas");
+    const a = document.createElement("a");
+    a.download = "registration-qr.png";
+    // Handle both canvas rendering and img rendering
+    if (canvas) {
+      a.href = canvas.toDataURL("image/png");
+    } else if (img) {
+      a.href = img.src;
+    }
     a.click();
   };
 };
@@ -455,7 +472,6 @@ $("createForm").onsubmit=async e=>{
 
   if(!rows.length)return status($("createStatus"),"Add at least one activity with a slot limit.","error");
 
-  // 1) create the game round
   const {data:game,error:gerr}=await db.from("games").insert({
     title:$("gameTitle").value.trim(),
     description:$("gameDescription").value.trim(),
@@ -465,7 +481,6 @@ $("createForm").onsubmit=async e=>{
   }).select().single();
   if(gerr)return status($("createStatus"),gerr.message,"error");
 
-  // 2) create activities for that game
   const payload=rows.map(a=>({game_id:game.id,name:a.name,capacity:a.capacity,is_open:true}));
   const {error:aerr}=await db.from("activities").insert(payload);
   if(aerr){
